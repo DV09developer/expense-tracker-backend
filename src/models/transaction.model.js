@@ -9,9 +9,14 @@ const transactionSchema = new mongoose.Schema(
       index: true,
     },
 
-    type: {
+    exoense_type: {
       type: String,
       enum: ["income", "expense"],
+      required: true,
+    },
+    
+    exoense_title: {
+      type: String,
       required: true,
     },
 
