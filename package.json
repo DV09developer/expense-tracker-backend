@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Project management application for the agency",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "nodemon -r dotenv/config --experimental-json-modules src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
