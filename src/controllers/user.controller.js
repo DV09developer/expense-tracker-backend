@@ -2,6 +2,7 @@ import { apiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import { apiResponse } from "../utils/apiResponse.js";
+import jwt from "jsonwebtoken";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
@@ -39,12 +40,12 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new apiError(444 , "Make your password strong with min 6 character")
     }
 
-    const existedEmail = await User.findOne(email);
+    const existedEmail = await User.findOne({email});
     if (existedEmail) {
         throw new apiError(402 , "User is already exists please change your email")
     }
 
-    const existedUsername = await User.findOne(username);
+    const existedUsername = await User.findOne({username});
     if (existedUsername) {
         throw new apiError(402 , "User is already exists please change your username")
     }
@@ -160,7 +161,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).select(
-        "-password -refreshToken -__v"
+        "-password -__v -createdAt -updatedAt -refreshToken"
     );
 
     if (!user) {
@@ -179,4 +180,94 @@ const getUserProfile = asyncHandler(async (req, res) => {
     );
 });
 
-export {registerUser , loginUser , logoutUser , getUserProfile };
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    // Get refresh token from cookie or body
+    const incomingRefreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (!incomingRefreshToken) {
+        throw new apiError(401, "Refresh token is required");
+    }
+
+    // Verify the incoming refresh token
+    let decodedToken;
+    try {
+        decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.JWT_REFRESH_SECRET
+        );
+    } catch (error) {
+        throw new apiError(401, "Invalid or expired refresh token");
+    }
+
+    // Find user and match token
+    const user = await User.findById(decodedToken._id);
+    if (!user) {
+        throw new apiError(404, "User not found");
+    }
+
+    if (user.refreshToken !== incomingRefreshToken) {
+        throw new apiError(401, "Refresh token is already used or invalid");
+    }
+
+    // Generate fresh tokens
+    const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id);
+
+    const options = {
+        httponly: true,
+        secure: true
+    };
+
+    return res
+        .status(200)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
+        .json(
+            new apiResponse(
+                200,
+                { accessToken, refreshToken },
+                "Access token refreshed successfully"
+            )
+        );
+});
+
+const updateUserProfile = asyncHandler(async (req, res) => {
+    const { firstname, lastname, username } = req.body;
+
+    // At least one field must be provided
+    if (!firstname?.trim() && !lastname?.trim() && !username?.trim()) {
+        throw new apiError(400, "Please provide at least one field to update");
+    }
+
+    // If username is being changed, check it's not already taken
+    if (username?.trim()) {
+        const existingUser = await User.findOne({ 
+            username: username.toLowerCase(),
+            _id: { $ne: req.user._id }  // exclude current user
+        });
+        if (existingUser) {
+            throw new apiError(409, "Username is already taken");
+        }
+    }
+
+    // Build update object dynamically (only update provided fields)
+    const updateFields = {};
+    if (firstname?.trim()) updateFields.firstname = firstname.trim();
+    if (lastname?.trim())  updateFields.lastname  = lastname.trim();
+    if (username?.trim())  updateFields.username  = username.toLowerCase().trim();
+
+    const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        { $set: updateFields },
+        { new: true }
+    ).select("-password -refreshToken -__v");
+
+    if (!updatedUser) {
+        throw new apiError(500, "Profile update failed");
+    }
+
+    return res.status(200).json(
+        new apiResponse(200, updatedUser, "Profile updated successfully")
+    );
+});
+
+export { registerUser, loginUser, logoutUser, getUserProfile, refreshAccessToken, updateUserProfile  };
