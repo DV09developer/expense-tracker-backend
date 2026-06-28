@@ -8,7 +8,7 @@ router.route("/register").post(registerUser);
 
 router.route("/login").post(loginUser);
 
-router.route("/logout").post(logoutUser);
+router.route("/logout").post(verifyAccessToken, logoutUser);
 
 router.route("/profile").get(
   verifyAccessToken,

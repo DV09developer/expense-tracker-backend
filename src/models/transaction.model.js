@@ -9,13 +9,13 @@ const transactionSchema = new mongoose.Schema(
       index: true,
     },
 
-    exoense_type: {
+    expense_type: {
       type: String,
       enum: ["income", "expense"],
       required: true,
     },
     
-    exoense_title: {
+    expense_title: {
       type: String,
       required: true,
     },

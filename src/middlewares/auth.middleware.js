@@ -6,7 +6,7 @@ import { apiError } from "../utils/apiError.js";
 export const verifyAccessToken = asyncHandler(async (req, _, next) => {
     try {
         // get token from cookies or req headers in case cookies are not in use
-        const token = req.cookies?.accessToken || req.headers("authorization")?.replace("Bearer " , "")
+        const token = req.cookies?.accessToken || req.header("authorization")?.replace("Bearer " , "")
     
         // if token is not available return error
         if (!token) {

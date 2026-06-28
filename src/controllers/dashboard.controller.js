@@ -12,7 +12,7 @@ const getDashboardData = asyncHandler(async (req, res) => {
     const totalIncome = transactions
         .filter(
             transaction =>
-                transaction.exoense_type === "income"
+                transaction.expense_type === "income"
         )
         .reduce(
             (sum, transaction) =>
@@ -23,7 +23,7 @@ const getDashboardData = asyncHandler(async (req, res) => {
     const totalExpense = transactions
         .filter(
             transaction =>
-                transaction.exoense_type === "expense"
+                transaction.expense_type === "expense"
         )
         .reduce(
             (sum, transaction) =>
@@ -61,7 +61,7 @@ const getCategoryBreakdown = asyncHandler(
                 {
                     $match: {
                         userId: req.user._id,
-                        exoense_type: "expense"
+                        expense_type: "expense"
                     }
                 },
                 {
@@ -76,12 +76,12 @@ const getCategoryBreakdown = asyncHandler(
                     $project: {
                         _id: 0,
                         category: "$_id",
-                        amount: "$totalAmount"
+                        expense_amount: "$totalAmount"
                     }
                 },
                 {
                     $sort: {
-                        amount: -1
+                        expense_amount: -1
                     }
                 }
             ]);
@@ -103,7 +103,7 @@ const getMonthlyExpenses = asyncHandler(
                 {
                     $match: {
                         userId: req.user._id,
-                        exoense_type: "expense"
+                        expense_type: "expense"
                     }
                 },
                 {
@@ -135,7 +135,7 @@ const getMonthlyExpenses = asyncHandler(
             monthlyExpenses.map(item => ({
                 year: item._id.year,
                 month: item._id.month,
-                amount:
+                expense_amount:
                     item.totalAmount
             }));
 

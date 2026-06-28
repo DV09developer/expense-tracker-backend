@@ -45,6 +45,7 @@ const createTransaction = asyncHandler(async (req, res) => {
     description,
     expense_type,
     expense_title,
+    category
   } = req.body;
 
   const userId = req.user?._id;
@@ -65,12 +66,17 @@ const createTransaction = asyncHandler(async (req, res) => {
     throw new apiError(400, "Expense title is required");
   }
 
+  if (!category?.trim()) {
+    throw new apiError(400, "Category is required");
+  }
+
   const transaction = await Transaction.create({
     userId,
     amount,
     description,
     expense_type,
     expense_title,
+    category
   });
 
   return res.status(201).json(
