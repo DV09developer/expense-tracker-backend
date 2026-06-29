@@ -7,6 +7,7 @@ import routes from "./routes/index.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import connect_db from "./db/index.js";
 import mongoose from "mongoose";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use(
   })
 );
 
+// Cookie Parser
+app.use(cookieParser());
 
 
 // Logging
