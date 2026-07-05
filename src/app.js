@@ -33,10 +33,12 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const PORT = process.env.PORT || 8000;
+
 connect_db()
 .then(() => {
-    app.listen(process.env.PORT, () => {
-        console.log(`Server is running on port ${process.env.PORT}`);
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
         console.log(`MongoDB connected successfully`);
         console.log("Connected DB:", mongoose.connection.name);
     });
@@ -53,12 +55,6 @@ app.get("/api/health", (req, res) => {
     message: "Server is running",
     timestamp: new Date().toISOString(),
   });
-});
-
-const PORT = process.env.PORT || 8000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
 });
 
 // API Routes

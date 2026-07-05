@@ -53,7 +53,7 @@ const registerUser = asyncHandler(async (req, res) => {
     const registerUser = await User.create({ username, email, password, firstname, lastname });
 
     const createdUser = await User.findById(registerUser._id).select(
-        "-passwoed -__v -createdAt -updatedAt -refreshToken"
+        "-password -__v -createdAt -updatedAt -refreshToken"
     )
 
     if (!createdUser) {
@@ -109,7 +109,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 
     const options = {
-        httponly : true,
+        httpOnly : true,
         secure: true
     }
 
@@ -145,7 +145,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     
     // for setup and updates cookies
     const options = {
-        httponly : true,
+        httpOnly : true,
         secure: true
     }
 
@@ -213,7 +213,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const { accessToken, refreshToken } = await generateAccessTokenAndRefreshToken(user._id);
 
     const options = {
-        httponly: true,
+        httpOnly: true,
         secure: true
     };
 
