@@ -118,7 +118,8 @@ const updateTransaction = asyncHandler(async (req, res) => {
         amount,
         description,
         expense_type,
-        expense_title
+        expense_title,
+        category
     } = req.body;
 
     const transaction = await Transaction.findById(transactionId);
@@ -152,6 +153,10 @@ const updateTransaction = asyncHandler(async (req, res) => {
 
     if (expense_title !== undefined) {
         transaction.expense_title = expense_title;
+    }
+
+    if (category !== undefined) {
+        transaction.category = category;
     }
 
     await transaction.save();

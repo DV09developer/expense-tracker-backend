@@ -8,7 +8,7 @@ import { errorMiddleware } from "./middlewares/error.middleware.js";
 import connect_db from "./db/index.js";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
-
+import { allowedOrigins } from "./constants.js";
 const app = express();
 
 // Security
@@ -17,7 +17,7 @@ app.use(helmet());
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -35,18 +35,6 @@ app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 8000;
 
-connect_db()
-.then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-        console.log(`MongoDB connected successfully`);
-        console.log("Connected DB:", mongoose.connection.name);
-    });
-})
-.catch((error) => {
-    console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
-})
 
 // Health Check
 app.get("/api/health", (req, res) => {
@@ -70,5 +58,18 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use(errorMiddleware);
+
+connect_db()
+.then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+        console.log(`MongoDB connected successfully`);
+        console.log("Connected DB:", mongoose.connection.name);
+    });
+})
+.catch((error) => {
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1);
+})
 
 export default app;
