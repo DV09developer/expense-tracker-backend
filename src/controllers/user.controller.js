@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import jwt from "jsonwebtoken";
+import { sendEmail } from "../utils/sendEmail.js";
+import crypto from "crypto";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
     try {
@@ -274,6 +276,111 @@ const updateUserProfile = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new apiResponse(200, updatedUser, "Profile updated successfully")
+    );
+});
+
+const forgetPassword = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email?.trim()) {
+        throw new apiError(400, "Email is required");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new apiError(404, "User not found");
+    }
+
+    const otp = Math.floor(
+        100000 + Math.random() * 900000
+    ).toString();
+
+    const hashedOTP = crypto
+        .createHash("sha256")
+        .update(otp)
+        .digest("hex");
+
+    user.forgotPasswordOTP = otp;
+    user.forgotPasswordOTPExpiry = new Date(
+        Date.now() + 10 * 60 * 1000 // 10 minutes
+    );
+
+    await user.save({ validateBeforeSave: false });
+
+    await sendEmail(
+        user.email,
+        "Password Reset OTP",
+        `
+        <h2>Password Reset Request</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        `
+    );
+
+    return res.status(200).json(
+        new apiResponse(
+            200,
+            null,
+            "OTP sent successfully"
+        )
+    );
+});
+
+const verifyOTP = asyncHandler(async (req, res) => {
+    const { email, otp } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new apiError(404, "User not found");
+    }
+
+    if (
+        user.forgotPasswordOTP !== otp ||
+        user.forgotPasswordOTPExpiry < new Date()
+    ) {
+        throw new apiError(400, "Invalid or expired OTP");
+    }
+
+    return res.status(200).json(
+        new apiResponse(
+            200,
+            null,
+            "OTP verified successfully"
+        )
+    );
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw new apiError(404, "User not found");
+    }
+
+    if (
+        user.forgotPasswordOTP !== otp ||
+        user.forgotPasswordOTPExpiry < new Date()
+    ) {
+        throw new apiError(400, "Invalid or expired OTP");
+    }
+
+    user.password = newPassword;
+    user.forgotPasswordOTP = null;
+    user.forgotPasswordOTPExpiry = null;
+
+    await user.save();
+
+    return res.status(200).json(
+        new apiResponse(
+            200,
+            null,
+            "Password reset successfully"
+        )
     );
 });
 

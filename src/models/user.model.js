@@ -37,6 +37,14 @@ const userSchema = new Schema({
     refreshToken: {
         type: String,
     },
+    forgotPasswordOTP: {
+        type: String,
+        default: null
+    },
+    forgotPasswordOTPExpiry: {
+        type: Date,
+        default: null
+    }
 }, {timestamps : true})
 
 // Hash password before saving
