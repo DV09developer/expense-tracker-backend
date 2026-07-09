@@ -163,10 +163,6 @@ const logoutUser = asyncHandler(async (req, res) => {
     )
 })
 
-const forgetPassword = asyncHandler(async (req, res) => {
-    const { email } = req.body;
-})
-
 const getUserProfile = asyncHandler(async (req, res) => {
     const user = await User.findById(req.user._id).select(
         "-password -__v -createdAt -updatedAt -refreshToken"
@@ -384,4 +380,4 @@ const resetPassword = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser, logoutUser, getUserProfile, refreshAccessToken, updateUserProfile  };
+export { registerUser, loginUser, logoutUser, getUserProfile, refreshAccessToken, updateUserProfile, resetPassword, verifyOTP, forgetPassword };
