@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { verifyAccessToken } from "../middlewares/auth.middleware.js";
-import { loginUser , registerUser , logoutUser , getUserProfile , refreshAccessToken , updateUserProfile } from "../controllers/user.controller.js";
+import { loginUser , registerUser , logoutUser , getUserProfile , refreshAccessToken , updateUserProfile , forgetPassword } from "../controllers/user.controller.js";
 
 const router = Router();
 
@@ -18,6 +18,6 @@ router.route("/profile").get(
 router.route("/refresh-token").post(refreshAccessToken);
 
 router.patch("/update-profile", verifyAccessToken, updateUserProfile);
-
+router.get("/forget-password", forgetPassword);
 
 export default router;
