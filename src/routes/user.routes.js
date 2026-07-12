@@ -19,5 +19,6 @@ router.route("/refresh-token").post(refreshAccessToken);
 
 router.patch("/update-profile", verifyAccessToken, updateUserProfile);
 router.get("/forget-password", forgetPassword);
+//router.post("/verify-otp", forgetPassword);
 
 export default router;
