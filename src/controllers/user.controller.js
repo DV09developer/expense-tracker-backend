@@ -284,42 +284,41 @@ const forgetPassword = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (!user) {
-        throw new apiError(404, "User not found");
+    if (user) {
+        
+        const otp = Math.floor(
+            100000 + Math.random() * 900000
+        ).toString();
+
+        const hashedOTP = crypto
+            .createHash("sha256")
+            .update(otp)
+            .digest("hex");
+
+        user.forgotPasswordOTP = hashedOTP;
+        user.forgotPasswordOTPExpiry = new Date(
+            Date.now() + 10 * 60 * 1000 // 10 minutes
+        );
+
+        await user.save({ validateBeforeSave: false });
+
+        await sendEmail(
+            user.email,
+            "Password Reset OTP",
+            `
+            <h2>Password Reset Request</h2>
+            <p>Your OTP is:</p>
+            <h1>${otp}</h1>
+            <p>This OTP will expire in 10 minutes.</p>
+            `
+        );
     }
-
-    const otp = Math.floor(
-        100000 + Math.random() * 900000
-    ).toString();
-
-    const hashedOTP = crypto
-        .createHash("sha256")
-        .update(otp)
-        .digest("hex");
-
-    user.forgotPasswordOTP = otp;
-    user.forgotPasswordOTPExpiry = new Date(
-        Date.now() + 10 * 60 * 1000 // 10 minutes
-    );
-
-    await user.save({ validateBeforeSave: false });
-
-    await sendEmail(
-        user.email,
-        "Password Reset OTP",
-        `
-        <h2>Password Reset Request</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP will expire in 10 minutes.</p>
-        `
-    );
 
     return res.status(200).json(
         new apiResponse(
             200,
             null,
-            "OTP sent successfully"
+            "If that email exists, an OTP has been sent"
         )
     );
 });
@@ -332,18 +331,29 @@ const verifyOTP = asyncHandler(async (req, res) => {
     if (!user) {
         throw new apiError(404, "User not found");
     }
-
+    
+    const hashedOTP = crypto
+    .createHash("sha256")
+    .update(otp)
+    .digest("hex");
+    
     if (
-        user.forgotPasswordOTP !== otp ||
+        user.forgotPasswordOTP !== hashedOTP ||
         user.forgotPasswordOTPExpiry < new Date()
     ) {
         throw new apiError(400, "Invalid or expired OTP");
     }
 
+    // in verifyOTP, after validating:
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    user.resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save({ validateBeforeSave: false });
+
     return res.status(200).json(
         new apiResponse(
             200,
-            null,
+            resetToken,
             "OTP verified successfully"
         )
     );
