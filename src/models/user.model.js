@@ -17,7 +17,8 @@ const userSchema = new Schema({
         trim: true,
         unique: true,
         lowercase: true,
-        index: true
+        index: true,
+        match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: {
         type: String,
@@ -44,15 +45,25 @@ const userSchema = new Schema({
     forgotPasswordOTPExpiry: {
         type: Date,
         default: null
+    },
+    resetToken: {
+        type: String,
+        default: null
+    },
+    resetTokenExpiry: {
+        type: Date,
+        default: null
+    },
+    otpAttempts: {
+        type: Number,
+        default: 0
+    },
+    otpLockedUntil: {
+        type: Date,
+        default: null
     }
 }, {timestamps : true})
 
-// Hash password before saving
-// userSchema.pre("save", async function (next) {
-//     if (!this.isModified("password")) return next();
-//     this.password = await bcrypt.hash(this.password, 10);
-//     next();
-// });
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
 

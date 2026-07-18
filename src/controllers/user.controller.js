@@ -326,28 +326,48 @@ const forgetPassword = asyncHandler(async (req, res) => {
 const verifyOTP = asyncHandler(async (req, res) => {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!email?.trim() || !otp?.trim()) {
+        throw new apiError(400, "Email and OTP are required");
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
 
     if (!user) {
         throw new apiError(404, "User not found");
     }
     
-    const hashedOTP = crypto
-    .createHash("sha256")
-    .update(otp)
-    .digest("hex");
-    
-    if (
-        user.forgotPasswordOTP !== hashedOTP ||
-        user.forgotPasswordOTPExpiry < new Date()
-    ) {
-        throw new apiError(400, "Invalid or expired OTP");
+    if (user.otpLockedUntil && user.otpLockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((user.otpLockedUntil - new Date()) / 60000);
+        throw new apiError(429, `Too many failed attempts. Try again in ${minutesLeft} minute(s).`);
     }
 
+    if (!user.forgotPasswordOTP || user.forgotPasswordOTPExpiry < new Date()) {
+        throw new apiError(400, "OTP has expired. Please request a new one.");
+    }
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    if (user.forgotPasswordOTP !== hashedOTP) {
+        user.otpAttempts += 1;
+
+        // Lock account's OTP flow after 5 failed attempts
+        if (user.otpAttempts >= 5) {
+            user.otpLockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 min lock
+            user.otpAttempts = 0;
+        }
+
+        await user.save({ validateBeforeSave: false });
+        throw new apiError(400, "Invalid OTP");
+    }
+
+    // Success - reset attempt counter
+    // await user.save({ validateBeforeSave: false });
+    
     // in verifyOTP, after validating:
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
     user.resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.otpAttempts = 0;
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json(
@@ -360,7 +380,11 @@ const verifyOTP = asyncHandler(async (req, res) => {
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-    const { email, otp, newPassword } = req.body;
+    const { email, resetToken, newPassword } = req.body;
+
+    if (!email?.trim() || !resetToken?.trim() || !newPassword?.trim()) {
+        throw new apiError(400, "Email, reset token, and new password are required");
+    }
 
     const user = await User.findOne({ email });
 
@@ -368,16 +392,30 @@ const resetPassword = asyncHandler(async (req, res) => {
         throw new apiError(404, "User not found");
     }
 
-    if (
-        user.forgotPasswordOTP !== otp ||
-        user.forgotPasswordOTPExpiry < new Date()
-    ) {
-        throw new apiError(400, "Invalid or expired OTP");
+    if (!user.resetToken || !user.resetTokenExpiry) {
+        throw new apiError(400, "Invalid or expired reset token");
+    }
+
+    let valid = false;
+    try {
+        const incomingHash = crypto.createHash("sha256").update(resetToken).digest();
+        const storedHash = Buffer.from(user.resetToken, "hex");
+        valid = incomingHash.length === storedHash.length && crypto.timingSafeEqual(incomingHash, storedHash);
+    } catch (err) {
+        valid = false;
+    }
+
+    if (!valid || user.resetTokenExpiry < new Date()) {
+        throw new apiError(400, "Invalid or expired reset token");
     }
 
     user.password = newPassword;
     user.forgotPasswordOTP = null;
     user.forgotPasswordOTPExpiry = null;
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    user.otpAttempts = 0;
+    user.otpLockedUntil = null;
 
     await user.save();
 
