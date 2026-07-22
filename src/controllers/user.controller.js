@@ -44,12 +44,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const existedEmail = await User.findOne({email});
     if (existedEmail) {
-        throw new apiError(402 , "User is already exists please change your email")
+        throw new apiError(402 , "User with this email already exists, please use a different email")
     }
 
     const existedUsername = await User.findOne({username});
     if (existedUsername) {
-        throw new apiError(402 , "User is already exists please change your username")
+        throw new apiError(402 , "User with this username already exists, please choose a different username")
     }
 
     const registerUser = await User.create({ username, email, password, firstname, lastname });
@@ -86,13 +86,13 @@ const loginUser = asyncHandler(async (req, res) => {
     })
 
     if (!user) {
-        throw new apiError(404 , "User not found");
+        throw new apiError(404 , "Your credentials are invalid, please check your email or username");
     }
 
     const isPasswordMatch = await user.isPasswordCorrect(password);
 
     if (!isPasswordMatch) {
-        throw new apiError(401 , "Invalid password");
+        throw new apiError(404 , "Your credentials are invalid, please check your email or username");
     }
 
     // await generateAccessTokenAndRefreshToken(user._id).then(({ accessToken, refreshToken }) => {
@@ -333,7 +333,7 @@ const verifyOTP = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase().trim() });
 
     if (!user) {
-        throw new apiError(404, "User not found");
+        throw new apiError(404, "Email and OTP are required");
     }
     
     if (user.otpLockedUntil && user.otpLockedUntil > new Date()) {
@@ -389,11 +389,7 @@ const resetPassword = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-        throw new apiError(404, "User not found");
-    }
-
-    if (!user.resetToken || !user.resetTokenExpiry) {
-        throw new apiError(400, "Invalid or expired reset token");
+        throw new apiError(400, "Email, reset token, and new password are required");
     }
 
     let valid = false;
