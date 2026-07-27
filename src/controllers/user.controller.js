@@ -85,6 +85,8 @@ const loginUser = asyncHandler(async (req, res) => {
         $or: [{ email }, { username }]
     })
 
+    // console.log("User found for login:", user); // Debugging line
+
     if (!user) {
         throw new apiError(404 , "Your credentials are invalid, please check your email or username");
     }
