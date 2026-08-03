@@ -382,32 +382,28 @@ const verifyOTP = asyncHandler(async (req, res) => {
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-    const { email, resetToken, newPassword } = req.body;
+    const { resetToken, newPassword } = req.body;
 
-    if (!email?.trim() || !resetToken?.trim() || !newPassword?.trim()) {
-        throw new apiError(400, "Email, reset token, and new password are required");
+    if (!resetToken?.trim() || !newPassword?.trim()) {
+        throw new apiError(400, "Reset token and new password are required");
     }
 
-    const user = await User.findOne({ email });
+    const hashedToken = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+
+    const user = await User.findOne({
+        resetToken: hashedToken,
+        resetTokenExpiry: { $gt: new Date() }
+    });
 
     if (!user) {
-        throw new apiError(400, "Email, reset token, and new password are required");
-    }
-
-    let valid = false;
-    try {
-        const incomingHash = crypto.createHash("sha256").update(resetToken).digest();
-        const storedHash = Buffer.from(user.resetToken, "hex");
-        valid = incomingHash.length === storedHash.length && crypto.timingSafeEqual(incomingHash, storedHash);
-    } catch (err) {
-        valid = false;
-    }
-
-    if (!valid || user.resetTokenExpiry < new Date()) {
         throw new apiError(400, "Invalid or expired reset token");
     }
 
     user.password = newPassword;
+
     user.forgotPasswordOTP = null;
     user.forgotPasswordOTPExpiry = null;
     user.resetToken = null;
