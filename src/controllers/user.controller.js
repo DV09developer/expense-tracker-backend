@@ -370,6 +370,9 @@ const verifyOTP = asyncHandler(async (req, res) => {
     user.resetToken = crypto.createHash("sha256").update(resetToken).digest("hex");
     user.resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
     user.otpAttempts = 0;
+    user.forgotPasswordOTP = null;
+    user.forgotPasswordOTPExpiry = null;
+    user.otpLockedUntil = null;
     await user.save({ validateBeforeSave: false });
 
     return res.status(200).json(
